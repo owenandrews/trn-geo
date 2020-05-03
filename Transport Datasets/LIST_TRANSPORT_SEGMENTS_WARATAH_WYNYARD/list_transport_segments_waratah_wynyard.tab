@@ -1,0 +1,30 @@
+!table
+!version 300
+!charset WindowsLatin1
+
+Definition Table
+  Type NATIVE Charset "WindowsLatin1"
+  Fields 23
+    TRANSEG_ID Integer ;
+    TRANS_TYPE Char (60) ;
+    TSEG_FEAT Char (60) ;
+    STATUS Char (60) ;
+    TRAFF_DIR Char (60) ;
+    TRAN_CLASS Char (60) ;
+    USER_TYPE Char (60) ;
+    TOUR_CLASS Char (4) ;
+    SURFACE_TY Char (60) ;
+    PRI_NAME Char (60) ;
+    PRI_NOMREG Char (7) ;
+    SEC_NAME Char (60) ;
+    SEC_NOMREG Char (7) ;
+    BRIDGE_TUN Char (60) ;
+    BRIDGE_T_1 Char (7) ;
+    AUTHORITY Char (60) ;
+    FOREIGN_ID Char (30) ;
+    COMP_LEN Decimal (19, 8) ;
+    UFI Char (12) ;
+    FMP Char (12) ;
+    CREATED_ON Char (19) ;
+    LIST_GUID Char (38) ;
+    SHAPE_LEN Decimal (19, 11) ;

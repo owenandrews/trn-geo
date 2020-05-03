@@ -1,0 +1,19 @@
+!table
+!version 300
+!charset WindowsLatin1
+!edit_version 450
+
+Definition Table
+  Type NATIVE Charset "WindowsLatin1"
+  Fields 11
+    LGA_ID Integer ;
+    NAME Char (60) ;
+    LGA_CODE Integer ;
+    PLAN_REF Char (8) ;
+    GAZ_DATE Date ;
+    NOM_REG_NO Char (7) ;
+    UFI Char (38) ;
+    CREATED_ON Char (19) ;
+    LIST_GUID Char (38) ;
+    SHAPE_AREA Decimal (19, 11) ;
+    SHAPE_LEN Decimal (19, 11) ;
