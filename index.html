@@ -4,7 +4,7 @@
 		<meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no" />
 		<title>TRN Map</title>
 		<script src="https://api.mapbox.com/mapbox-gl-js/v1.9.1/mapbox-gl.js"></script>
-		<script src='https://unpkg.com/@turf/turf/turf.min.js'></script>
+		<script src='https://cdn.jsdelivr.net/npm/@turf/turf@6.5.0/turf.min.js'></script>
 		<link href="https://api.mapbox.com/mapbox-gl-js/v1.9.1/mapbox-gl.css" rel="stylesheet" />
 		<style>
 			body { margin: 0; padding: 0; }
@@ -15,6 +15,15 @@
 				max-width: 400px;
 				font: 12px/20px 'Helvetica Neue', Arial, Helvetica, sans-serif;
 				padding: 10px;
+				pointer-events: none;
+			}
+
+			.mapboxgl-popup *:not(button) {
+				pointer-events: none;
+			}
+
+			.mapboxgl-popup button {
+				pointer-events: all;
 			}
 		</style>
 	</head>
@@ -35,7 +44,7 @@
 				container: 'map', // container id
 				style: 'mapbox://styles/mapbox/streets-v11', // stylesheet location
 				center: [146.748221, -42.106119], // starting position [lng, lat]
-				zoom: 9 // starting zoom
+				zoom: 7.3 // starting zoom
 			});
 
 			const canvas = map.getCanvasContainer();
@@ -44,7 +53,26 @@
 			const popup = new mapboxgl.Popup({
 				closeButton: false,
 				closeOnClick: false,
+				offset: 0,
 			});
+
+			const persistentPopup = new mapboxgl.Popup({
+				closeButton: true,
+				closeOnClick: false,
+				offset: 0,
+			});
+
+			map.addControl(
+				new mapboxgl.GeolocateControl({
+					positionOptions: {
+						enableHighAccuracy: true
+					},
+					// When active the map will receive updates to the device's location as it changes.
+					trackUserLocation: true,
+					// Draw an arrow next to the location dot to indicate which direction the device is heading.
+					showUserHeading: true
+				})
+			);
 
 			map.on('load', function() {
 				addLine('dv', lines.dv, '#fb7a14', '#e06d14');
@@ -55,6 +83,8 @@
 				addLine('wl', lines.wl, '#15356a', '#0e2447');
 
 				map.on('mousemove', function(e) {
+					if (persistentPopup.isOpen()) return;
+
 					var bbox = [
 						[e.point.x - 50, e.point.y - 50],
 						[e.point.x + 50, e.point.y + 50]
@@ -100,6 +130,41 @@
 				});
 			});
 
+			map.on('click', function(e) {
+				// Prevent the default map drag behavior.
+				e.preventDefault();
+
+				let closest_line = null;
+				let last_point = null;
+
+				for (let [key, line] of Object.entries(lines)) {
+		  			const point = turf.nearestPointOnLine(line.geometry, turf.point([e.lngLat.lng, e.lngLat.lat]));
+		  			if (closest_line == null || point.properties.dist < last_point.properties.dist) {
+		  				closest_line = line;
+		  				last_point = point;
+		  			}
+				}
+				 
+				const coordinates = last_point.geometry.coordinates;
+				 
+				// Ensure that if the map is zoomed out such that multiple
+				// copies of the feature are visible, the popup appears
+				// over the copy being pointed to.
+				while (Math.abs(e.lngLat.lng - coordinates[0]) > 180) {
+					coordinates[0] += e.lngLat.lng > coordinates[0] ? 360 : -360;
+				}
+
+				// Close the hover popup, if open
+				popup.remove();
+				 
+				// Populate the popup and set its coordinates
+				// based on the feature found.
+				persistentPopup
+					.setLngLat(coordinates)
+					.setHTML(`<b>Line:</b> ${closest_line.properties.name}<br><b>Location:</b> ${last_point.properties.location.toLocaleString()} ${closest_line.properties.kp.toUpperCase()}`)
+					.addTo(map);
+			});
+
 			function addLine(id, source, color, highlight) {
 				map.addSource(id, {
 					'type': 'geojson',
@@ -119,69 +184,7 @@
 						'line-width': 4
 					}
 				});
-
-				// // When the cursor enters a feature in the point layer, prepare for dragging.
-				// map.on('mouseenter', id, function(e) {
-				// 	map.setPaintProperty(id, 'line-color', highlight);
-				// 	canvas.style.cursor = 'pointer';
-
-				// 	const point = turf.nearestPointOnLine(source.geometry, turf.point([e.lngLat.lng, e.lngLat.lat]));
-				// 	const coordinates = point.geometry.coordinates;
-					 
-				// 	// Ensure that if the map is zoomed out such that multiple
-				// 	// copies of the feature are visible, the popup appears
-				// 	// over the copy being pointed to.
-				// 	while (Math.abs(e.lngLat.lng - coordinates[0]) > 180) {
-				// 		coordinates[0] += e.lngLat.lng > coordinates[0] ? 360 : -360;
-				// 	}
-					 
-				// 	// Populate the popup and set its coordinates
-				// 	// based on the feature found.
-				// 	popup
-				// 	.setLngLat(coordinates)
-				// 	.setHTML(`<b>Line:</b> ${source.properties.name}<br><b>Location:</b> ${point.properties.location.toLocaleString()} ${source.properties.kp.toUpperCase()}`)
-				// 	.addTo(map);
-				// });
-				 
-				// map.on('mouseleave', id, function() {
-				// 	map.setPaintProperty(id, 'line-color', color);
-				// 	canvas.style.cursor = '';
-				// 	popup.remove();
-				// });
 			}
-
-			map.on('click', function(e) {
-				// Prevent the default map drag behavior.
-				e.preventDefault();
-
-				let closest_line = null;
-				let last_point = null;
-
-				for (let [key, line] of Object.entries(lines)) {
-		  			const point = turf.nearestPointOnLine(line.geometry, turf.point([e.lngLat.lng, e.lngLat.lat]));
-		  			if (closest_line == null || point.properties.dist < last_point.properties.dist) {
-		  				closest_line = line;
-		  				last_point = point;
-		  			}
-		  			console.log(line);
-				}
-				 
-				const coordinates = last_point.geometry.coordinates;
-				 
-				// Ensure that if the map is zoomed out such that multiple
-				// copies of the feature are visible, the popup appears
-				// over the copy being pointed to.
-				while (Math.abs(e.lngLat.lng - coordinates[0]) > 180) {
-					coordinates[0] += e.lngLat.lng > coordinates[0] ? 360 : -360;
-				}
-				 
-				// Populate the popup and set its coordinates
-				// based on the feature found.
-				popup
-				.setLngLat(coordinates)
-				.setHTML(`<b>Line:</b> ${closest_line.properties.name}<br><b>Location:</b> ${last_point.properties.location.toLocaleString()} ${closest_line.properties.kp.toUpperCase()}`)
-				.addTo(map);
-			});
 		</script>
 	</body>
 </html>
