@@ -34,12 +34,14 @@
 			const lines = {};
 			const measurements = {};
 
+			const settings = getMapSettings();
+
 			mapboxgl.accessToken = 'pk.eyJ1Ijoib3dlbmFuZHJld3MiLCJhIjoiY2o4b3M1Mml2MDd5bTJ3bm5hcTVjMDlmNyJ9.WL7Qs1GHf9-aoXUVdlIuJw';
 			const map = new mapboxgl.Map({
 				container: 'map', // container id
 				style: 'mapbox://styles/mapbox/streets-v11', // stylesheet location
-				center: [146.748221, -42.106119], // starting position [lng, lat]
-				zoom: 7.3 // starting zoom
+				center: settings ? [settings.lng, settings.lat] : [146.748221, -42.106119], // starting position [lng, lat]
+				zoom: settings ? settings.zoom : 7.3 // starting zoom
 			});
 
 			const canvas = map.getCanvasContainer();
@@ -70,11 +72,15 @@
 			);
 
 			map.on('load', function() {
-				// Fit to Tasmania
-				map.fitBounds([
-					[143.637, -39.448],
-					[149.019, -43.693]
-				]);
+				if (!settings) {
+					// Fit to Tasmania
+					map.fitBounds([
+						[143.637, -39.448],
+						[149.019, -43.693]
+					], {
+						animate: false,
+					});
+				}
 
 				addLine('derwent-valley', '#fb7a14');
 				addLine('south', '#79a82c');
@@ -113,6 +119,10 @@
 				popup.remove();
 				 
 				renderPopup(e, Object.values(lines), persistentPopup);
+			});
+
+			map.on('moveend', () => {
+				setMapSettings(map);
 			});
 
 			addMeasurements('hobart-suburban');
@@ -228,6 +238,30 @@
 				const { default: data } = await import(`./Measurements/${id}.geojson`, { with: { type: "json" }});
 
 				measurements[id] = data;
+			}
+
+			function getMapSettings() {
+				let settings = window.localStorage.getItem('trnMapSettings');
+
+				if (!settings) return;
+
+				settings = JSON.parse(settings);
+
+				if (!settings.lat || !settings.lng || !settings.zoom) return;
+
+				return settings;
+			}
+
+			function setMapSettings(map) {
+				const { lat, lng } = map.getCenter();
+
+				const settings = {
+					lat,
+					lng,
+					zoom: map.getZoom(),
+				};
+
+				window.localStorage.setItem('trnMapSettings', JSON.stringify(settings));
 			}
 		</script>
 	</body>
