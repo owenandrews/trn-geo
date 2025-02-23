@@ -69,9 +69,13 @@
 				})
 			);
 
-			addMeasurements('hobart-suburban');
-
 			map.on('load', function() {
+				// Fit to Tasmania
+				map.fitBounds([
+					[143.637, -39.448],
+					[149.019, -43.693]
+				]);
+
 				addLine('derwent-valley', '#fb7a14');
 				addLine('south', '#79a82c');
 				addLine('north-east', '#fb7a14');
@@ -101,6 +105,7 @@
 			});
 
 			map.on('click', function(e) {
+				console.log(JSON.stringify(e.lngLat));
 				// Prevent the default map click behavior.
 				e.preventDefault();
 
@@ -109,6 +114,8 @@
 				 
 				renderPopup(e, Object.values(lines), persistentPopup);
 			});
+
+			addMeasurements('hobart-suburban');
 
 			function renderPopup(e, lines, popup) {
 				// Do nothing if we don't have any data yet.
