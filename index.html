@@ -25,23 +25,37 @@
 			.mapboxgl-popup button {
 				pointer-events: all;
 			}
+
+			select.mapboxgl-ctrl {
+				height: 29px;
+				box-shadow: 0 0 0 2px rgba(0, 0, 0, .1);
+				border-radius: 4px;
+				background-color: #fff;
+				outline: none;
+				border: none;
+				padding: 0 4px;
+			}
 		</style>
 	</head>
 	<body>
 		<div id="map"></div>
-		<script>
+		<script type="module">
+			import StyleSelectorControl from '/src/style-selector.js';
+			import { styles } from '/src/styles.js';
+
 			// Containers for holding loaded lines and measurments
-			const lines = {};
-			const measurements = {};
+			let lines = {};
+			let measurements = {};
 
 			const settings = getMapSettings();
 
 			mapboxgl.accessToken = 'pk.eyJ1Ijoib3dlbmFuZHJld3MiLCJhIjoiY2o4b3M1Mml2MDd5bTJ3bm5hcTVjMDlmNyJ9.WL7Qs1GHf9-aoXUVdlIuJw';
 			const map = new mapboxgl.Map({
 				container: 'map', // container id
-				style: 'mapbox://styles/mapbox/satellite-streets-v12', // stylesheet location
+				style: Object.values(styles)[0],
 				center: settings ? [settings.lng, settings.lat] : [146.748221, -42.106119], // starting position [lng, lat]
-				zoom: settings ? settings.zoom : 7.3 // starting zoom
+				zoom: settings ? settings.zoom : 7.3, // starting zoom
+				minZoom: 6,
 			});
 
 			const canvas = map.getCanvasContainer();
@@ -71,6 +85,12 @@
 				})
 			);
 
+			map.addControl(new StyleSelectorControl(styles, (style) => {
+				lines = {};
+				map.setStyle(null); // Fixes an issue with style.load event not being emitted
+				map.setStyle(style);
+			}), 'top-left');
+
 			map.on('load', function() {
 				if (!settings) {
 					// Fit to Tasmania
@@ -81,7 +101,9 @@
 						animate: false,
 					});
 				}
+			});
 
+			map.on('style.load', function() {
 				addLine('derwent-valley', '#fb7a14');
 				addLine('south', '#79a82c');
 				addLine('north-east', '#fb7a14');
@@ -111,7 +133,6 @@
 			});
 
 			map.on('click', function(e) {
-				console.log(JSON.stringify(e.lngLat));
 				// Prevent the default map click behavior.
 				e.preventDefault();
 
