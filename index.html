@@ -7,7 +7,7 @@
 		<script src='https://cdn.jsdelivr.net/npm/@turf/turf@6.5.0/turf.min.js'></script>
 		<link href="https://api.mapbox.com/mapbox-gl-js/v1.9.1/mapbox-gl.css" rel="stylesheet" />
 		<style>
-			body { margin: 0; padding: 0; }
+			body { margin: 0; padding: 0; font-family: sans-serif; }
 			
 			#map { position: absolute; top: 0; bottom: 0; width: 100%; }
 
@@ -35,10 +35,61 @@
 				border: none;
 				padding: 0 4px;
 			}
+
+			#geolocate {
+				position: fixed;
+				bottom: 10px;
+				left: 10px;
+				right: 10px;
+				background-color: #fff;
+				border-radius: 16px;
+				display: grid;
+				grid-template-columns: 1fr 1fr;
+				padding: 10px;
+				visibility: hidden;
+				gap: 10px;
+
+				section {
+					background-color: #f0f0f0;
+					text-align: center;
+					border-radius: 8px;
+					container-type: inline-size;
+
+					h1 {
+						font-size: min(8cqw, 1.2em);
+						color: #737380;
+					}
+
+					p {
+						font-size: min(24cqw, 4rem);
+						font-weight: 600;
+						font-variant-numeric: tabular-nums;
+						margin: .3em 0 .5em 0;
+					}
+
+					span {
+						font-size: 1rem;
+						font-weight: normal;
+						color: #9090a4;
+					}
+				}
+			}
 		</style>
 	</head>
 	<body>
 		<div id="map"></div>
+
+		<aside id="geolocate">
+			<section class="speed">
+				<h1>Speed</h1>
+				<p></p>
+			</section>
+			<section class="location">
+				<h1>Location</h1>
+				<p></p>
+			</section>
+		</aside>
+
 		<script type="module">
 			import StyleSelectorControl from '/src/style-selector.js';
 			import { styles } from '/src/styles.js';
@@ -46,6 +97,8 @@
 			// Containers for holding loaded lines and measurments
 			let lines = {};
 			let measurements = {};
+
+			const geolocateEl = document.querySelector('#geolocate');
 
 			const settings = getMapSettings();
 
@@ -73,17 +126,19 @@
 				offset: 0,
 			});
 
-			map.addControl(
-				new mapboxgl.GeolocateControl({
-					positionOptions: {
-						enableHighAccuracy: true
-					},
-					// When active the map will receive updates to the device's location as it changes.
-					trackUserLocation: true,
-					// Draw an arrow next to the location dot to indicate which direction the device is heading.
-					showUserHeading: true
-				})
-			);
+			const geolocate = new mapboxgl.GeolocateControl({
+				positionOptions: {
+					enableHighAccuracy: true
+				},
+				// When active the map will receive updates to the device's location as it changes.
+				trackUserLocation: true,
+				// Draw an arrow next to the location dot to indicate which direction the device is heading.
+				showUserHeading: true
+			})
+
+			// window.geolocate = geolocate
+
+			map.addControl(geolocate);
 
 			map.addControl(new StyleSelectorControl(styles, (style) => {
 				lines = {};
@@ -144,6 +199,21 @@
 
 			map.on('moveend', () => {
 				setMapSettings(map);
+			});
+
+			geolocate.on('geolocate', function (event) {
+				geolocateEl.style.visibility = 'visible';
+				geolocateEl.querySelector('.speed p').innerHTML = `${ (event.coords?.speed ?? 0) * 3.6 }<br><span>km/h<span>`;
+				
+				const point = closestPointToLines(turf.point([event.coords.longitude, event.coords.latitude]), Object.values(lines));
+				const measurement = closestMeasurementToPoint(point.geometry);
+
+				// If distance to closest measurement is more than 10 meters, ignore it.
+				if (!measurement || turf.distance(measurement, point) > 0.01) {
+					geolocateEl.querySelector('.location p').innerHTML = `${point.properties?.location.toLocaleString()}<br><span>${point.properties?.kp.toUpperCase()}</span>`;
+				} else {
+					geolocateEl.querySelector('.location p').innerHTML = `${measurement.properties?.original_kilometrage.replace('+', '.')}<br><span>${measurement.properties?.kp.toUpperCase()}</span>`;
+				}
 			});
 
 			addMeasurements('hobart-suburban');
