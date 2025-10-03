@@ -203,7 +203,7 @@
 
 			geolocate.on('geolocate', function (event) {
 				geolocateEl.style.visibility = 'visible';
-				geolocateEl.querySelector('.speed p').innerHTML = `${ (event.coords?.speed ?? 0) * 3.6 }<br><span>km/h<span>`;
+				geolocateEl.querySelector('.speed p').innerHTML = `${Math.round((event.coords?.speed ?? 0) * 3.6)}<br><span>km/h<span>`;
 				
 				const point = closestPointToLines(turf.point([event.coords.longitude, event.coords.latitude]), Object.values(lines));
 				const measurement = closestMeasurementToPoint(point.geometry);
