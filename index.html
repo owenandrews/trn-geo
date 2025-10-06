@@ -134,11 +134,20 @@
 				trackUserLocation: true,
 				// Draw an arrow next to the location dot to indicate which direction the device is heading.
 				showUserHeading: true
-			})
-
-			// window.geolocate = geolocate
+			});
 
 			map.addControl(geolocate);
+
+			// Create observe to hide geolocation popup when location tracking stops
+			const observer = new MutationObserver((mutationsList) => {
+				for (const mutation of mutationsList) {
+					if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
+						if (![...mutation.target.classList].some((c) => c === 'mapboxgl-ctrl-geolocate-active' || c === 'mapboxgl-ctrl-geolocate-background')) {
+							geolocateEl.style.visibility = 'hidden';
+						}
+					}
+				}
+			});
 
 			map.addControl(new StyleSelectorControl(styles, (style) => {
 				lines = {};
@@ -156,6 +165,9 @@
 						animate: false,
 					});
 				}
+
+				// Start observing geolocation button
+				observer.observe(geolocate._container.querySelector('button'), { attributes: true, attributeFilter: ['class'] });
 			});
 
 			map.on('style.load', function() {
